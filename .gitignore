@@ -1,0 +1,13 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Build outputs
+node_modules/
+dist/
+build/
+.venv/
+__pycache__/
+*.pyc
