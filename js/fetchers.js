@@ -1,4 +1,6 @@
 
+import { CONFIG } from './config.js';
+
 export function classifyInput(raw){
   const s = raw.trim();
   if(!s) return { kind:'empty' };
@@ -24,6 +26,12 @@ export function classifyInput(raw){
 }
 
 export async function fetchWebsiteReadable(url){
+  if(CONFIG.API_BASE){
+    const r = await fetch(`${CONFIG.API_BASE}/fetch?url=${encodeURIComponent(url)}`);
+    if(!r.ok) throw new Error('API fetch failed');
+    const j = await r.json();
+    return j.text || '';
+  }
   const normalized = url.startsWith('http') ? url : 'https://' + url;
   const target = 'https://r.jina.ai/' + normalized;
   const res = await fetch(target, { headers:{ 'Accept':'text/html, text/plain;q=0.9' } });
@@ -34,6 +42,11 @@ export async function fetchWebsiteReadable(url){
 export async function fetchGitHubUser(handle){
   const res = await fetch(`https://api.github.com/users/${encodeURIComponent(handle)}`);
   if(!res.ok) throw new Error('GitHub user not found / API blocked');
+  return await res.json();
+}
+export async function fetchGitHubEvents(handle){
+  const res = await fetch(`https://api.github.com/users/${encodeURIComponent(handle)}/events/public`);
+  if(!res.ok) throw new Error('GitHub events fetch failed');
   return await res.json();
 }
 

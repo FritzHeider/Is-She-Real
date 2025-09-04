@@ -1,26 +1,34 @@
 
-# IsSheReal — ES Modules Split (GitLab + Cloudflare Pages)
+# IsSheReal — Pro ESM (GitLab + Cloudflare Pages)
 
-Minimal multi-file split for clean diffs and future growth.
+Includes:
+- ES module split (`/js` + `styles.css`)
+- Optional **API enrichment** toggle (localStorage: `isshereal:api`)
+- **GitHub posting cadence** heuristic (daytime vs night activity)
 
-## Structure
-- `index.html` — static entry
-- `styles.css` — light theme tokens + UI
-- `js/*` — ES modules (utils, geo, fetchers, scoring, app, main)
+## Deploy (GitLab → Cloudflare Pages)
 
-## Deploy on GitLab + Cloudflare Pages
-1. Create a GitLab project `isshereal` and push this folder:
 ```bash
 git init
 git remote add origin https://gitlab.com/<your-group>/isshereal.git
 git add .
-git commit -m "Initial ESM split"
+git commit -m "ESM + API toggle + GitHub cadence"
 git push -u origin main
 ```
-2. Cloudflare Dashboard → **Pages** → **Create project** → Connect **GitLab** → select repo.
-3. Build settings: Framework **None**, Build command *(blank)*, Output dir `/`.
-4. Deploy → add `isshereal.com` under **Custom domains**.
 
-## Notes
-- Logo is embedded as a data URL in `index.html` (header/hero/verdict/footer/favicon).
-- Client-only fetches use CORS-friendly endpoints; for broader coverage, add the FastAPI or Worker backend later.
+Cloudflare Pages:
+- Framework: **None**
+- Build command: *(blank)*
+- Output dir: `/`
+- Add custom domain in Pages after first deploy.
+
+## API Enrichment
+If you deploy the FastAPI or Worker backend:
+- Set Pages **Environment Variable** `VITE_API_BASE` *(optional for future bundlers)*.
+- In this static build, paste the URL in the UI input (top card) and click **Use API**.
+- The app will call `${API_BASE}/fetch?url=...` for HTML snapshot.
+
+## GitHub Cadence Heuristic
+We fetch `/users/:handle/events/public` and compute a day/night ratio on latest events.
+- Score boost if ≥60% of events occur during 8:00–19:59 local time.
+

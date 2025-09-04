@@ -28,3 +28,25 @@ export function scoreWebsite(text, sourceUrl, viewerCtx){
   } catch {}
   const score=combine(signals); return { score, signals };
 }
+
+export function cadenceHeuristic(events, viewerTz){
+  // Compute local-hour histogram of pushes/issues/comments; give points for day-hours activity
+  try{
+    const hours = Array.from({length:24},()=>0);
+    for(const ev of events.slice(0,60)){  // last ~60 events
+      const ts = ev.created_at ? new Date(ev.created_at) : null;
+      if(!ts) continue;
+      const local = ts; // GitHub returns UTC; client Date shifts to local automatically
+      const h = local.getHours();
+      hours[h] += 1;
+    }
+    const dayHours = [8,9,10,11,12,13,14,15,16,17,18,19]; // 8am–7:59pm
+    const day = dayHours.reduce((a,h)=>a+hours[h],0);
+    const night = (hours.reduce((a,b)=>a+b,0)) - day;
+    const ratio = (day+night) ? day/(day+night) : 0;
+    const ok = ratio >= 0.6; // ≥60% daytime activity
+    return { ok, ratio, note:`day={${day}} night={${night}} ratio=${ratio.toFixed(2)}` };
+  }catch(e){
+    return { ok:false, ratio:0, note:'cadence-error' };
+  }
+}

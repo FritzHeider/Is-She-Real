@@ -1,8 +1,9 @@
 
 import { $, escapeHtml } from './utils.js';
-import { ensureGeoShim, enableGeo, getViewerContext, updateViewerChips } from './geo.js';
-import { classifyInput, fetchWebsiteReadable, fetchGitHubUser, fetchRedditUser } from './fetchers.js';
-import { flag, combine, verdictLabel, scoreWebsite } from './scoring.js';
+import { ensureGeoShim, enableGeo, getViewerContext } from './geo.js';
+import { CONFIG } from './config.js';
+import { classifyInput, fetchWebsiteReadable, fetchGitHubUser, fetchGitHubEvents, fetchRedditUser } from './fetchers.js';
+import { flag, combine, verdictLabel, scoreWebsite, cadenceHeuristic } from './scoring.js';
 
 function renderSignals(signals){
   const host = document.getElementById('signals'); host.innerHTML='';
@@ -44,29 +45,40 @@ export async function analyze(raw){
   const meter=document.getElementById('meter'); meter.setAttribute('stroke','#64748b'); meter.setAttribute('stroke-dasharray','0 1');
 
   try{
-    let res, score, signals;
+    let res, score, signals=[];
     const viewer = await getViewerContext();
 
     if(parsed.kind === 'website'){
       const text = await fetchWebsiteReadable(parsed.url);
       const r = scoreWebsite(text, parsed.url, viewer);
-      renderSignals(r.signals); setGauge(r.score); setVerdict(r.score);
-      res = { type:'website', snapshotBytes: text.length };
       score = r.score; signals = r.signals;
+      res = { type:'website', snapshotBytes: text.length };
     } else if(parsed.kind === 'github' || (parsed.kind==='guess' && /[a-z0-9-]{1,39}/i.test(parsed.handle||''))){
-      const gh = await fetchGitHubUser(parsed.handle || raw.replace(/^@/,''));
-      renderSignals([flag(true,10,'GitHub response','ok')]); setGauge(65); setVerdict(65);
-      res = { type:'github', id: gh.id, login: gh.login }; score = 65;
+      const handle = parsed.handle || raw.replace(/^@/,'');
+      const gh = await fetchGitHubUser(handle);
+      signals.push(flag(true,8,'GitHub profile','ok'));
+      // Cadence heuristic using public events
+      try{
+        const events = await fetchGitHubEvents(handle);
+        const cad = cadenceHeuristic(events, viewer.tz);
+        signals.push(flag(cad.ok, 6, 'Posting cadence (local day)', cad.note));
+      }catch(e){
+        signals.push(flag(false,2,'Posting cadence','events fetch failed'));
+      }
+      score = combine(signals);
+      res = { type:'github', id: gh.id, login: gh.login };
     } else if(parsed.kind === 'reddit' || (parsed.kind==='guess' && /\w{2,}/.test(parsed.handle||''))){
       const rd = await fetchRedditUser(parsed.handle || raw.replace(/^@/,''));
-      renderSignals([flag(true,8,'Reddit response','ok')]); setGauge(55); setVerdict(55);
-      res = { type:'reddit', name: rd?.data?.name }; score = 55;
+      signals.push(flag(true,6,'Reddit profile','ok'));
+      score = combine(signals);
+      res = { type:'reddit', name: rd?.data?.name };
     } else if(parsed.kind==='empty'){
       throw new Error('Enter a URL or handle.');
     } else {
       throw new Error('Unsupported input. Try a full URL, a GitHub user (gh:NAME), or Reddit (reddit:@NAME).');
     }
 
+    renderSignals(signals); setGauge(score); setVerdict(score);
     out.result = { score, signals, meta: res };
     localStorage.setItem('isshereal:last', JSON.stringify(out));
     return out;
@@ -101,6 +113,17 @@ export function wireUp(){
     }catch(e){ alert('Export failed: '+e.message) }
   });
   document.getElementById('geoBtn').addEventListener('click', enableGeo);
+  // API toggle
+  const apiUrl = document.getElementById('apiUrl');
+  const apiStatus = document.getElementById('apiStatus');
+  const saveApi = document.getElementById('saveApi');
+  apiUrl.value = localStorage.getItem('isshereal:api') || '';
+  apiStatus.textContent = apiUrl.value ? `API: on` : `API: off`;
+  saveApi.addEventListener('click', ()=>{
+    const v = apiUrl.value.trim();
+    if(v){ localStorage.setItem('isshereal:api', v); apiStatus.textContent='API: on'; alert('API enabled'); }
+    else { localStorage.removeItem('isshereal:api'); apiStatus.textContent='API: off'; alert('API disabled'); }
+  });
+
   ensureGeoShim();
-  getViewerContext();
 }
