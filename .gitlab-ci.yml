@@ -1,12 +1,57 @@
 stages:
   - test
 
-unit-tests:
+# Speed up pip installs across jobs/pipelines
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PYTEST_ADDOPTS: "-q"
+
+cache:
+  key:
+    files:
+      - requirements.txt
+      - requirements-dev.txt
+      - .gitlab-ci.yml
+    prefix: "$PYTHON_VERSION"
+  paths:
+    - .cache/pip
+
+# Reusable job template
+.test-template: &test_template
   stage: test
-  image: python:3.11-slim
-  script:
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - python -V
+    - pip install -U pip
     - pip install -r requirements.txt
     - pip install -r requirements-dev.txt
-    - pytest -q
-  only:
-    - main
+  script:
+    - pytest --cov=app --cov-report=xml --cov-report=term --junitxml=report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    expire_in: 14 days
+  rules:
+    # Run on MRs and on any branch (including main)
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+# Python matrix (3.10 / 3.11 / 3.12)
+test-3.10:
+  variables:
+    PYTHON_VERSION: "3.10"
+  <<: *test_template
+
+test-3.11:
+  variables:
+    PYTHON_VERSION: "3.11"
+  <<: *test_template
+
+test-3.12:
+  variables:
+    PYTHON_VERSION: "3.12"
+  <<: *test_template
