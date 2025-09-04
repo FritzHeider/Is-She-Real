@@ -1,4 +1,3 @@
-
 export function flag(ok, weight, label, note){ return { ok:Boolean(ok), weight:Number(weight)||1, label, note }; }
 export function combine(signals){ const total=signals.reduce((a,s)=>a+s.weight,0)||1; const good=signals.reduce((a,s)=>a+(s.ok?s.weight:0),0); return Math.round(100*good/total); }
 export function verdictLabel(score){
@@ -6,7 +5,6 @@ export function verdictLabel(score){
   if(score>=45) return { label:'Inconclusive', cls:'warn', hint:'Mixed signals; needs manual review' };
   return { label:'Likely Clickbait/Bot', cls:'bad', hint:'Sparse signals or red flags' };
 }
-
 export function scoreWebsite(text, sourceUrl, viewerCtx){
   const signals=[]; const lower=text.toLowerCase(); const length=text.length;
   signals.push(flag(length>1200,10,'Content volume',length+' chars'));
@@ -19,7 +17,7 @@ export function scoreWebsite(text, sourceUrl, viewerCtx){
   const recentMention=new RegExp(String(year)).test(text)||new RegExp(String(year-1)).test(text);
   signals.push(flag(recentMention,4,'Recency mention',recentMention?'recent year on page':'no recent date'));
   try {
-    const m = text.match(/<\s*html[^>]*lang\s*=\s*"([a-zA-Z-]{2,8})"/i);
+    const m = text.match(/<\s*html[^>]*lang\s*=\s*\"([a-zA-Z-]{2,8})\"/i);
     if(m){
       const pageLang = m[1].toLowerCase().slice(0,2);
       const viewerLang = String(viewerCtx?.locale||navigator.language||'en').slice(0,2).toLowerCase();
@@ -27,26 +25,4 @@ export function scoreWebsite(text, sourceUrl, viewerCtx){
     }
   } catch {}
   const score=combine(signals); return { score, signals };
-}
-
-export function cadenceHeuristic(events, viewerTz){
-  // Compute local-hour histogram of pushes/issues/comments; give points for day-hours activity
-  try{
-    const hours = Array.from({length:24},()=>0);
-    for(const ev of events.slice(0,60)){  // last ~60 events
-      const ts = ev.created_at ? new Date(ev.created_at) : null;
-      if(!ts) continue;
-      const local = ts; // GitHub returns UTC; client Date shifts to local automatically
-      const h = local.getHours();
-      hours[h] += 1;
-    }
-    const dayHours = [8,9,10,11,12,13,14,15,16,17,18,19]; // 8am–7:59pm
-    const day = dayHours.reduce((a,h)=>a+hours[h],0);
-    const night = (hours.reduce((a,b)=>a+b,0)) - day;
-    const ratio = (day+night) ? day/(day+night) : 0;
-    const ok = ratio >= 0.6; // ≥60% daytime activity
-    return { ok, ratio, note:`day={${day}} night={${night}} ratio=${ratio.toFixed(2)}` };
-  }catch(e){
-    return { ok:false, ratio:0, note:'cadence-error' };
-  }
 }

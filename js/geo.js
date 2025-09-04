@@ -1,4 +1,3 @@
-
 export function ensureGeoShim(){
   if(typeof window.geoLocationStorage === "undefined"){
     window.geoLocationStorage = {

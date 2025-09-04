@@ -1,4 +1,3 @@
-
 import { CONFIG } from './config.js';
 
 export function classifyInput(raw){
@@ -15,6 +14,20 @@ export function classifyInput(raw){
         const idx = parts.findIndex(p => ['u','user'].includes(p));
         const handle = idx>=0 ? parts[idx+1] : null;
         return { kind:'reddit', url:u.href, handle };
+      }
+      // social URLs
+      if(host.includes('instagram.com')){
+        const parts = u.pathname.split('/').filter(Boolean);
+        return { kind:'instagram', username: parts[0] || null, url: u.href };
+      }
+      if(host.includes('facebook.com')){
+        const parts = u.pathname.split('/').filter(Boolean);
+        return { kind:'facebook', username: parts[0] || null, url: u.href };
+      }
+      if(host.includes('tiktok.com')){
+        const parts = u.pathname.split('/').filter(Boolean);
+        const at = parts.find(p => p.startsWith('@'));
+        return { kind:'tiktok', username: at ? at.slice(1) : parts[0] || null, url: u.href };
       }
       return { kind:'website', url:u.href };
     }catch(e){ return { kind:'unknown', error:e.message } }
@@ -39,19 +52,20 @@ export async function fetchWebsiteReadable(url){
   return await res.text();
 }
 
-export async function fetchGitHubUser(handle){
-  const res = await fetch(`https://api.github.com/users/${encodeURIComponent(handle)}`);
-  if(!res.ok) throw new Error('GitHub user not found / API blocked');
-  return await res.json();
+export async function socialInstagram({ user_id, username }){
+  if(!CONFIG.API_BASE) throw new Error('API_BASE not set');
+  const qs = user_id ? `user_id=${encodeURIComponent(user_id)}` : `username=${encodeURIComponent(username||'')}`;
+  const r = await fetch(`${CONFIG.API_BASE}/social/instagram?${qs}`);
+  return await r.json();
 }
-export async function fetchGitHubEvents(handle){
-  const res = await fetch(`https://api.github.com/users/${encodeURIComponent(handle)}/events/public`);
-  if(!res.ok) throw new Error('GitHub events fetch failed');
-  return await res.json();
+export async function socialFacebook({ page_id, username }){
+  if(!CONFIG.API_BASE) throw new Error('API_BASE not set');
+  const qs = page_id ? `page_id=${encodeURIComponent(page_id)}` : `username=${encodeURIComponent(username||'')}`;
+  const r = await fetch(`${CONFIG.API_BASE}/social/facebook?${qs}`);
+  return await r.json();
 }
-
-export async function fetchRedditUser(handle){
-  const res = await fetch(`https://www.reddit.com/user/${encodeURIComponent(handle)}/about.json`, { headers:{ 'Accept':'application/json' } });
-  if(!res.ok) throw new Error('Reddit user not found / CORS blocked');
-  return await res.json();
+export async function socialTikTok({ username }){
+  if(!CONFIG.API_BASE) throw new Error('API_BASE not set');
+  const r = await fetch(`${CONFIG.API_BASE}/social/tiktok?username=${encodeURIComponent(username||'')}`);
+  return await r.json();
 }

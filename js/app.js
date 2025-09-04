@@ -1,9 +1,8 @@
-
-import { $, escapeHtml } from './utils.js';
+import { $, escapeHtml, setText } from './utils.js';
 import { ensureGeoShim, enableGeo, getViewerContext } from './geo.js';
 import { CONFIG } from './config.js';
-import { classifyInput, fetchWebsiteReadable, fetchGitHubUser, fetchGitHubEvents, fetchRedditUser } from './fetchers.js';
-import { flag, combine, verdictLabel, scoreWebsite, cadenceHeuristic } from './scoring.js';
+import { classifyInput, fetchWebsiteReadable, socialInstagram, socialFacebook, socialTikTok } from './fetchers.js';
+import { flag, combine, verdictLabel, scoreWebsite } from './scoring.js';
 
 function renderSignals(signals){
   const host = document.getElementById('signals'); host.innerHTML='';
@@ -26,11 +25,11 @@ function setGauge(score){
 }
 function setVerdict(score){
   const v = verdictLabel(score);
-  document.getElementById('verdict').textContent = v.label;
-  document.getElementById('verdictNote').textContent = v.hint;
+  setText('verdict', v.label);
+  setText('verdictNote', v.hint);
   const pills = document.getElementById('verdictPills'); pills.innerHTML = '';
   const pill = document.createElement('span'); pill.className = `pill ${v.cls}`; pill.textContent = `Confidence: ${score}/100`; pills.appendChild(pill);
-  document.getElementById('scoreHint').textContent = 'confidence';
+  setText('scoreHint', 'confidence');
 }
 
 export async function analyze(raw){
@@ -38,59 +37,42 @@ export async function analyze(raw){
   const out = { target: raw, parsed };
 
   document.getElementById('signals').innerHTML='';
-  document.getElementById('verdict').textContent='Working…';
-  document.getElementById('verdictNote').textContent='Collecting public signals';
-  document.getElementById('scoreText').textContent='…';
-  document.getElementById('scoreHint').textContent='running';
+  setText('verdict','Working…'); setText('verdictNote','Collecting public signals');
+  setText('scoreText','…'); setText('scoreHint','running');
   const meter=document.getElementById('meter'); meter.setAttribute('stroke','#64748b'); meter.setAttribute('stroke-dasharray','0 1');
 
   try{
-    let res, score, signals=[];
+    let score, signals=[];
     const viewer = await getViewerContext();
 
     if(parsed.kind === 'website'){
       const text = await fetchWebsiteReadable(parsed.url);
       const r = scoreWebsite(text, parsed.url, viewer);
       score = r.score; signals = r.signals;
-      res = { type:'website', snapshotBytes: text.length };
-    } else if(parsed.kind === 'github' || (parsed.kind==='guess' && /[a-z0-9-]{1,39}/i.test(parsed.handle||''))){
-      const handle = parsed.handle || raw.replace(/^@/,'');
-      const gh = await fetchGitHubUser(handle);
-      signals.push(flag(true,8,'GitHub profile','ok'));
-      // Cadence heuristic using public events
-      try{
-        const events = await fetchGitHubEvents(handle);
-        const cad = cadenceHeuristic(events, viewer.tz);
-        signals.push(flag(cad.ok, 6, 'Posting cadence (local day)', cad.note));
-      }catch(e){
-        signals.push(flag(false,2,'Posting cadence','events fetch failed'));
-      }
-      score = combine(signals);
-      res = { type:'github', id: gh.id, login: gh.login };
-    } else if(parsed.kind === 'reddit' || (parsed.kind==='guess' && /\w{2,}/.test(parsed.handle||''))){
-      const rd = await fetchRedditUser(parsed.handle || raw.replace(/^@/,''));
-      signals.push(flag(true,6,'Reddit profile','ok'));
-      score = combine(signals);
-      res = { type:'reddit', name: rd?.data?.name };
-    } else if(parsed.kind==='empty'){
-      throw new Error('Enter a URL or handle.');
     } else {
-      throw new Error('Unsupported input. Try a full URL, a GitHub user (gh:NAME), or Reddit (reddit:@NAME).');
+      // Non-website: leave core scoring minimal. Social-specific calls are manual via Social Enrichment section.
+      score = 50; signals = [flag(true,5,'Parsed input', parsed.kind)];
     }
 
     renderSignals(signals); setGauge(score); setVerdict(score);
-    out.result = { score, signals, meta: res };
+    out.result = { score, signals, meta: parsed };
     localStorage.setItem('isshereal:last', JSON.stringify(out));
     return out;
-
   }catch(err){
     console.error(err);
-    setGauge(0);
-    document.getElementById('verdict').textContent='Inconclusive';
-    document.getElementById('verdictNote').textContent=(err&&err.message?err.message:'Unknown error');
-    document.getElementById('scoreHint').textContent='error';
+    setGauge(0); setText('verdict','Inconclusive'); setText('verdictNote', err?.message || 'Unknown error');
+    setText('scoreHint', 'error');
     return out;
   }
+}
+
+function renderSocial(platform, data){
+  const host = document.getElementById('socialOut');
+  const card = document.createElement('div');
+  card.className = 'card';
+  const pretty = JSON.stringify(data, null, 2).slice(0, 4000);
+  card.innerHTML = `<div class="section-title">${platform}</div><pre>${escapeHtml(pretty)}</pre>`;
+  host.prepend(card);
 }
 
 export function wireUp(){
@@ -101,7 +83,7 @@ export function wireUp(){
     await analyze(v);
   });
   document.getElementById('demoBtn').addEventListener('click', ()=>{
-    const demos=['https://github.com/torvalds','gh:octocat','reddit:@spez','https://example.com'];
+    const demos=['https://github.com/torvalds','gh:octocat','reddit:@spez','https://example.com','https://instagram.com/instagram','https://www.tiktok.com/@scout2015','https://facebook.com/natgeo'];
     document.getElementById('input').value = demos[Math.floor(Math.random()*demos.length)];
   });
   document.getElementById('exportBtn').addEventListener('click', ()=>{
@@ -113,6 +95,7 @@ export function wireUp(){
     }catch(e){ alert('Export failed: '+e.message) }
   });
   document.getElementById('geoBtn').addEventListener('click', enableGeo);
+
   // API toggle
   const apiUrl = document.getElementById('apiUrl');
   const apiStatus = document.getElementById('apiStatus');
@@ -125,5 +108,28 @@ export function wireUp(){
     else { localStorage.removeItem('isshereal:api'); apiStatus.textContent='API: off'; alert('API disabled'); }
   });
 
+  // Social buttons
+  document.getElementById('igBtn').addEventListener('click', async ()=>{
+    if(!localStorage.getItem('isshereal:api')) return alert('Enable API first');
+    const raw = document.getElementById('igId').value.trim();
+    const payload = /^\d+$/.test(raw) ? { user_id: raw } : { username: raw };
+    const j = await socialInstagram(payload);
+    renderSocial('Instagram', j);
+  });
+  document.getElementById('fbBtn').addEventListener('click', async ()=>{
+    if(!localStorage.getItem('isshereal:api')) return alert('Enable API first');
+    const raw = document.getElementById('fbId').value.trim();
+    const payload = /^\d+$/.test(raw) ? { page_id: raw } : { username: raw };
+    const j = await socialFacebook(payload);
+    renderSocial('Facebook', j);
+  });
+  document.getElementById('ttBtn').addEventListener('click', async ()=>{
+    if(!localStorage.getItem('isshereal:api')) return alert('Enable API first');
+    const raw = document.getElementById('ttUser').value.trim();
+    const j = await socialTikTok({ username: raw });
+    renderSocial('TikTok', j);
+  });
+
   ensureGeoShim();
+  getViewerContext();
 }
