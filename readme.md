@@ -37,3 +37,4 @@ pytest -q
 - `GET /social/tiktok?username=...`
 
 **Notes:** IG/FB Graph are ID-first. TikTok endpoints are scope/approval-gated.
+# Is-SHe-Real
