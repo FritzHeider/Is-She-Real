@@ -9,7 +9,10 @@ from .social import fetch_instagram, fetch_facebook, fetch_tiktok, TOKENS_STATE
 APP_NAME = "isshereal-api"
 TIMEOUT_S = float(os.getenv("TIMEOUT_S", "6.0"))
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
-API_KEY = os.getenv("API_KEY", "")  # optional per-request protection
+def current_api_key() -> str:
+    """Return the latest API key value (optional per-request protection)."""
+
+    return os.getenv("API_KEY", "")
 
 app = FastAPI(title=APP_NAME, version="0.4.0")
 app.add_middleware(GZipMiddleware, minimum_size=1024)
@@ -21,9 +24,11 @@ app.add_middleware(
 )
 
 def require_api_key(x_api_key: str | None = Header(default=None)):
-    if not API_KEY:
+    api_key = current_api_key()
+
+    if not api_key:
         return True  # no protection enabled
-    if x_api_key == API_KEY:
+    if x_api_key == api_key:
         return True
     raise HTTPException(status_code=401, detail="invalid api key")
 
