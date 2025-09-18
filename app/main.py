@@ -1,9 +1,11 @@
-from fastapi import FastAPI, HTTPException, Query, Header, Depends
+from fastapi import FastAPI, HTTPException, Query, Header, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, AnyHttpUrl
 import httpx, socket, os
+from PIL import UnidentifiedImageError
 
+from .detector import detect_image_bytes
 from .social import fetch_instagram, fetch_facebook, fetch_tiktok, TOKENS_STATE
 
 APP_NAME = "isshereal-api"
@@ -84,6 +86,42 @@ async def enrich(inp: EnrichIn):
     except Exception:
         dns_info = {"error": "dns-failed"}
     return {"page": page, "dns": dns_info}
+
+@app.post("/detect/image", dependencies=[Depends(require_api_key)])
+async def detect_image_route(file: UploadFile | None = File(default=None), url: str | None = Form(default=None)):
+    if file is None and (url is None or not url.strip()):
+        raise HTTPException(status_code=400, detail="no image provided")
+
+    data: bytes | None = None
+    if file is not None:
+        data = await file.read()
+    else:
+        target = url.strip() if url else url
+        if not target:
+            raise HTTPException(status_code=400, detail="no image provided")
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=TIMEOUT_S) as cx:
+                resp = await cx.get(target)
+            resp.raise_for_status()
+            data = resp.content
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(status_code=exc.response.status_code, detail="failed to download image") from exc
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not data:
+        raise HTTPException(status_code=400, detail="empty image payload")
+
+    try:
+        result = detect_image_bytes(data)
+    except UnidentifiedImageError as exc:
+        raise HTTPException(status_code=400, detail="unsupported image format") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="image analysis failed") from exc
+
+    return result
 
 # ---------- Social endpoints ----------
 @app.get("/social/instagram", dependencies=[Depends(require_api_key)])

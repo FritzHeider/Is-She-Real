@@ -69,3 +69,19 @@ export async function socialTikTok({ username }){
   const r = await fetch(`${CONFIG.API_BASE}/social/tiktok?username=${encodeURIComponent(username||'')}`);
   return await r.json();
 }
+
+export async function detectImage({ file, url }){
+  if(!CONFIG.API_BASE) throw new Error('API_BASE not set');
+  const form = new FormData();
+  const trimmedUrl = typeof url === 'string' ? url.trim() : '';
+  if(file) form.append('file', file);
+  if(trimmedUrl) form.append('url', trimmedUrl);
+  const res = await fetch(`${CONFIG.API_BASE}/detect/image`, { method:'POST', body: form });
+  let data;
+  try{ data = await res.json(); }catch{ data = null; }
+  if(!res.ok){
+    const detail = data?.detail || data?.error || 'Image analysis failed';
+    throw new Error(detail);
+  }
+  return data;
+}

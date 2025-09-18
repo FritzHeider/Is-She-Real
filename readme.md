@@ -36,5 +36,7 @@ pytest -q
 - `GET /social/facebook?page_id=...` (preferred) or `?username=...`
 - `GET /social/tiktok?username=...`
 
+- `POST /detect/image`  form-data: `file` upload **or** `url` pointing to a direct image
+
 **Notes:** IG/FB Graph are ID-first. TikTok endpoints are scope/approval-gated.
 # Is-SHe-Real
