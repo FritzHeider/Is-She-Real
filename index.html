@@ -1,18 +1,401 @@
-    <section class="card" style="margin-top:16px">
-      <div class="section-title">Fake Image Detector</div>
-      <p class="muted">Upload an image (JPG, PNG, WebP) or paste a direct image URL to run metadata &amp; ELA heuristics inspired by deepfake research.</p>
-      <div id="imageDropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload an image for analysis">
-        <div><strong>Drop an image here</strong> or click to browse.</div>
-        <small class="muted">Max 6&nbsp;MB • files stay on this page until you hit Analyze</small>
-        <img id="imagePreview" alt="Selected image preview" style="display:none"/>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Is She Real? — Multi-signal authenticity intelligence</title>
+  <meta name="description" content="Inspect web personas, domains, and images with blended metadata, language, and forensic signals inspired by the latest trust & safety research." />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <script type="module" src="js/main.js" defer></script>
+</head>
+<body>
+  <header class="site-header" id="top">
+    <div class="container nav-bar">
+      <a class="logo" href="#top" aria-label="Is She Real home">is<samp>she</samp>real</a>
+      <nav class="nav-links" id="siteNav" aria-label="Primary">
+        <a href="#detector">Detector</a>
+        <a href="#image-tools">Image lab</a>
+        <a href="#api">API</a>
+        <a href="#social">Social intel</a>
+        <a href="#features">Why teams switch</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <a class="btn primary nav-cta" href="#detector">Launch workspace</a>
+    </div>
+    <div class="container hero-grid">
+      <div class="hero-copy reveal">
+        <span class="tag">Inspired by Reality Defender, Hive Moderation &amp; Truepic UX patterns</span>
+        <h1>Spot synthetic personas and fabricated media before they spread.</h1>
+        <p class="lead">We blended missing features from the top authenticity platforms—like explainable scoring, downloadable audits, and image metadata forensics—into a single responsive workspace.</p>
+        <ul class="hero-highlights">
+          <li><strong>Multi-signal scoring</strong> across language, contact footprints, and domain reputation.</li>
+          <li><strong>Forensic image lab</strong> with error level analysis heatmaps and metadata diffing.</li>
+          <li><strong>API-first design</strong> for embedding detection into existing trust &amp; safety workflows.</li>
+        </ul>
+        <div class="hero-actions">
+          <a class="btn primary" href="#detector">Run a live check</a>
+          <a class="btn ghost" href="#features">See what's new</a>
+        </div>
+        <div class="hero-meta">
+          <div class="stat">
+            <span class="stat-value">12+</span>
+            <span class="stat-label">signals blended</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">2025</span>
+            <span class="stat-label">playbooks aligned</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">&lt;2s</span>
+            <span class="stat-label">avg. analysis time</span>
+          </div>
+        </div>
       </div>
-      <input type="file" id="imageFile" accept="image/png,image/jpeg,image/webp" style="display:none"/>
-      <div class="image-controls">
-        <input type="text" id="imageUrl" placeholder="Direct image URL (https://…)" style="flex:1 1 280px"/>
-        <button id="imageAnalyzeBtn" type="button" class="btn primary">Analyze Image</button>
-        <button id="imageClearBtn" type="button" class="btn">Clear</button>
+      <div class="hero-visual reveal" aria-hidden="true">
+        <div class="floating-card">
+          <div class="floating-header">Live verdict preview</div>
+          <div class="floating-score">
+            <span class="floating-value">82</span>
+            <span class="floating-hint">confidence</span>
+          </div>
+          <div class="floating-pill ok">Likely human</div>
+          <ul class="floating-signals">
+            <li><span>✔</span> Rich content volume</li>
+            <li><span>✔</span> Contact footprint detected</li>
+            <li><span>!</span> Monitor for recent mentions</li>
+          </ul>
+          <div class="floating-footer">Automated audits ready for export</div>
+        </div>
       </div>
-      <p class="muted" id="imageApiNote">Enter the detector API URL above to enable image analysis.</p>
-      <div id="imageResult" class="image-result" aria-live="polite"></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="detector" class="section">
+      <div class="container">
+        <div class="section-heading reveal">
+          <h2>Persona, profile &amp; domain checker</h2>
+          <p>Drop in a URL or handle and benchmark it against weighted signals—mirroring the clarity we saw on competitor dashboards but with added transparency.</p>
+        </div>
+        <div class="analysis-grid">
+          <article class="card detection-card reveal" aria-labelledby="detector-title">
+            <div class="card-header">
+              <span class="badge">Realtime</span>
+              <h3 id="detector-title">Signal-blended analysis</h3>
+            </div>
+            <label class="input-label" for="input">Entity to review</label>
+            <div class="input-row">
+              <input id="input" type="text" autocomplete="off" placeholder="Paste a profile URL, @handle, or domain" aria-describedby="detector-help" />
+              <button id="analyzeBtn" class="btn primary" type="button">Analyze</button>
+            </div>
+            <p id="detector-help" class="muted">Examples: https://github.com/torvalds, reddit:@spez, @investigator</p>
+            <div class="utility-row">
+              <button id="demoBtn" class="btn ghost" type="button">Try a demo input</button>
+              <button id="exportBtn" class="btn ghost" type="button">Export last report</button>
+              <button id="geoBtn" class="btn ghost" type="button">Adapt to my region</button>
+            </div>
+            <div class="status-band">
+              <span id="apiStatus" class="status-pill offline" role="status" aria-live="polite">API offline</span>
+              <small class="muted">Configure your private endpoint below to enable live metadata &amp; image checks.</small>
+            </div>
+            <div class="score-panel">
+              <div class="gauge-wrap" role="img" aria-label="Confidence gauge">
+                <svg class="gauge" viewBox="0 0 120 120">
+                  <circle class="gauge-track" cx="60" cy="60" r="52" />
+                  <circle id="meter" class="gauge-meter" cx="60" cy="60" r="52" />
+                </svg>
+                <div class="score-label">
+                  <span id="scoreText" class="score-value">0</span>
+                  <span id="scoreHint" class="muted">confidence</span>
+                </div>
+              </div>
+              <div class="verdict-panel">
+                <h4 id="verdict">Awaiting input</h4>
+                <p id="verdictNote" class="muted">Paste something above to generate a weighted verdict.</p>
+                <div id="verdictPills" class="verdict-pills"></div>
+              </div>
+            </div>
+            <details class="trace-details">
+              <summary>Latest JSON report</summary>
+              <pre id="trace" aria-live="polite">{}</pre>
+            </details>
+          </article>
+
+          <article class="card signals-card reveal" aria-live="polite">
+            <div class="card-header">
+              <h3>Signal breakdown</h3>
+              <p class="muted">We expose the exact heuristics behind every score, something many detectors hide.</p>
+            </div>
+            <div id="signals" class="signals-list">
+              <p class="muted">Run an analysis to populate weighted signals.</p>
+            </div>
+          </article>
+
+          <article class="card insights-card reveal">
+            <div class="card-header">
+              <h3>What we added after researching competitors</h3>
+            </div>
+            <ul class="insights-list">
+              <li><strong>Explainable weights:</strong> Inspired by Reality Defender's brief notes, now every signal exposes its reason and weight.</li>
+              <li><strong>Downloadable audits:</strong> Parity with Truepic's report export so investigations stay portable.</li>
+              <li><strong>Geo-aware context:</strong> Quick locale toggle similar to Hive's location tuning for language heuristics.</li>
+              <li><strong>Live status chip:</strong> Transparent API health indicator seen on enterprise trust dashboards.</li>
+            </ul>
+            <p class="muted">You get the clarity of premium tools without leaving this page.</p>
+          </article>
+        </div>
+      </div>
     </section>
 
+    <section id="image-tools" class="section alt">
+      <div class="container">
+        <div class="section-heading reveal">
+          <h2>Forensic image lab</h2>
+          <p>Borrowing from services like Illuminarty and Sensity, we now ship an embedded metadata &amp; ELA workflow with responsive previews.</p>
+        </div>
+        <div class="analysis-grid image-grid">
+          <article class="card reveal">
+            <div class="card-header">
+              <span class="badge">Beta</span>
+              <h3>Fake Image Detector</h3>
+            </div>
+            <p class="muted">Upload an image (JPG, PNG, WebP) or paste a direct image URL to run metadata &amp; ELA heuristics inspired by deepfake research.</p>
+            <div id="imageDropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload an image for analysis">
+              <div><strong>Drop an image here</strong> or click to browse.</div>
+              <small class="muted">Max 6&nbsp;MB • files stay on this page until you hit Analyze</small>
+              <img id="imagePreview" alt="Selected image preview" style="display:none" />
+            </div>
+            <input type="file" id="imageFile" accept="image/png,image/jpeg,image/webp" style="display:none" />
+            <div class="image-controls">
+              <input type="text" id="imageUrl" placeholder="Direct image URL (https://…)" />
+              <button id="imageAnalyzeBtn" type="button" class="btn primary">Analyze Image</button>
+              <button id="imageClearBtn" type="button" class="btn ghost">Clear</button>
+            </div>
+            <p class="muted" id="imageApiNote">Enter the detector API URL above to enable image analysis.</p>
+            <div id="imageResult" class="image-result" aria-live="polite"></div>
+          </article>
+          <article class="card reveal">
+            <h3>What the image lab adds</h3>
+            <ul class="insights-list">
+              <li><strong>ELA heatmaps:</strong> Quickly spot contrast anomalies with an auto-generated preview.</li>
+              <li><strong>Metadata red flags:</strong> Surface suspicious EXIF generators similar to Truepic and Hive reports.</li>
+              <li><strong>Responsive layout:</strong> Works on phones with stacked controls and accessible drag-and-drop.</li>
+              <li><strong>Session memory:</strong> We keep the latest preview locally so you can compare runs.</li>
+            </ul>
+            <p class="muted">Pair the image verdict with the persona checker for a complete authenticity briefing.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="api" class="section">
+      <div class="container">
+        <div class="section-heading reveal">
+          <h2>Connect your private detector API</h2>
+          <p>We mirrored the self-hosting hooks offered by enterprise tools so you can run everything against your secured endpoint.</p>
+        </div>
+        <div class="api-grid">
+          <article class="card reveal">
+            <div class="card-header">
+              <h3>API configuration</h3>
+            </div>
+            <label class="input-label" for="apiUrl">Detector API URL</label>
+            <div class="input-row">
+              <input id="apiUrl" type="url" placeholder="https://your-detector.example/api" />
+              <button id="saveApi" class="btn primary" type="button">Save</button>
+            </div>
+            <p class="muted">Current status: <span id="apiStatusDetail">API offline</span></p>
+            <ul class="insights-list">
+              <li><strong>Private by default:</strong> Keep tokens local while taking advantage of our UI.</li>
+              <li><strong>One-click disable:</strong> Quickly fall back to cached web snapshots when testing.</li>
+              <li><strong>Image bridge:</strong> Enable the forensic lab instantly once your API is live.</li>
+            </ul>
+          </article>
+          <article class="card reveal">
+            <div class="card-header">
+              <h3>Embed the workflow</h3>
+            </div>
+            <pre><code>curl -X POST "$API/detect/image" \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -F "file=@evidence.jpg"
+
+# Response includes:
+#  - fake_score (0-1)
+#  - metadata_info.suspicious_tags[]
+#  - ela_preview (base64 PNG)
+</code></pre>
+            <p class="muted">Use the same endpoints we call from this UI to keep parity across internal tools.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="social" class="section alt">
+      <div class="container">
+        <div class="section-heading reveal">
+          <h2>Social account intelligence</h2>
+          <p>Built to match the cross-network lookups we saw on competitors, but streamlined for investigators.</p>
+        </div>
+        <div class="social-grid">
+          <article class="card reveal">
+            <div class="card-header">
+              <h3>Lookup connectors</h3>
+            </div>
+            <label class="input-label" for="igId">Instagram user ID or @handle</label>
+            <div class="input-row">
+              <input id="igId" type="text" placeholder="17841400008460056 or instagram" />
+              <button id="igBtn" class="btn primary" type="button">Fetch</button>
+            </div>
+            <label class="input-label" for="fbId">Facebook page ID or slug</label>
+            <div class="input-row">
+              <input id="fbId" type="text" placeholder="20531316728 or natgeo" />
+              <button id="fbBtn" class="btn primary" type="button">Fetch</button>
+            </div>
+            <label class="input-label" for="ttUser">TikTok @username</label>
+            <div class="input-row">
+              <input id="ttUser" type="text" placeholder="scout2015" />
+              <button id="ttBtn" class="btn primary" type="button">Fetch</button>
+            </div>
+            <p class="muted">Outputs render below with normalized JSON for rapid cross-checking.</p>
+          </article>
+          <article class="card reveal">
+            <div class="card-header">
+              <h3>Lookup history</h3>
+            </div>
+            <div id="socialOut" class="social-outlet">
+              <p class="muted">Run a lookup to see structured results appear here.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <div class="container">
+        <div class="section-heading reveal">
+          <h2>Why teams switch to Is She Real</h2>
+          <p>We analysed Reality Defender, Hive, and Truepic to ensure feature parity while adding clarity and mobility.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card reveal">
+            <div class="icon-bubble">🔍</div>
+            <h3>Explainable scoring</h3>
+            <p>Every signal shows its rationale, mirroring the trust &amp; safety transparency investigators expect.</p>
+          </article>
+          <article class="feature-card reveal">
+            <div class="icon-bubble">📸</div>
+            <h3>Forensic-ready</h3>
+            <p>ELA heatmaps, metadata badges, and suspicious tag counts go beyond simple fake/real badges.</p>
+          </article>
+          <article class="feature-card reveal">
+            <div class="icon-bubble">🤝</div>
+            <h3>Collaboration friendly</h3>
+            <p>Exportable JSON plus shareable snapshots keep analysts, legal, and support teams aligned.</p>
+          </article>
+          <article class="feature-card reveal">
+            <div class="icon-bubble">⚙️</div>
+            <h3>API-first architecture</h3>
+            <p>Bring your own keys, stay compliant with regional rules, and reuse the same endpoints elsewhere.</p>
+          </article>
+          <article class="feature-card reveal">
+            <div class="icon-bubble">📱</div>
+            <h3>Responsive &amp; fast</h3>
+            <p>Polished layouts and motion scale across phones, tablets, and desktops—no cramped modals.</p>
+          </article>
+          <article class="feature-card reveal">
+            <div class="icon-bubble">🛡️</div>
+            <h3>Safety-first defaults</h3>
+            <p>Local caching, no external uploads without consent, and optional API key enforcement.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-heading reveal">
+          <h2>How it fits into investigations</h2>
+          <p>Adopt the same modern playbook as the platforms we studied.</p>
+        </div>
+        <div class="timeline reveal">
+          <div class="timeline-step">
+            <div class="timeline-number">01</div>
+            <div>
+              <h3>Collect evidence</h3>
+              <p>Paste URLs, handles, or drop media. We snapshot content instantly without persistent storage.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-number">02</div>
+            <div>
+              <h3>Blend public &amp; private signals</h3>
+              <p>Language detection, contact footprints, domain metadata, and API enriched scores update in seconds.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-number">03</div>
+            <div>
+              <h3>Share decisions</h3>
+              <p>Export JSON, grab screenshots, or trigger downstream automation the same way enterprise tools do.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="section">
+      <div class="container">
+        <div class="section-heading reveal">
+          <h2>Frequently asked</h2>
+          <p>Answers crafted after comparing messaging from industry leaders.</p>
+        </div>
+        <div class="faq-grid reveal">
+          <details>
+            <summary>How accurate is the confidence score?</summary>
+            <p>Scores reflect weighted heuristics similar to what we observed on Hive and Reality Defender dashboards. They are directional, so always pair them with manual review.</p>
+          </details>
+          <details>
+            <summary>Where do image files go?</summary>
+            <p>Images stay in-browser until you enable your API endpoint. Once connected, files post directly to your server—never ours.</p>
+          </details>
+          <details>
+            <summary>Can I schedule recurring checks?</summary>
+            <p>Yes via the API. The export format mirrors our UI so you can automate alerts or send reports to case management systems.</p>
+          </details>
+          <details>
+            <summary>Do you store social lookups?</summary>
+            <p>No. Results render locally and you can clear them anytime. Add API authentication to align with your compliance policies.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <a class="logo" href="#top">is<samp>she</samp>real</a>
+        <p class="muted">Authenticity intelligence rebuilt after studying the best deepfake and trust &amp; safety tools.</p>
+      </div>
+      <div class="footer-links">
+        <a href="#detector">Detector</a>
+        <a href="#image-tools">Image lab</a>
+        <a href="#api">API</a>
+        <a href="#social">Social intel</a>
+        <a href="#features">Why switch</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="footer-meta">
+        <p>&copy; <span id="year"></span> Is She Real. All rights reserved.</p>
+        <p class="muted">Built with FastAPI + modern browser tooling.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
