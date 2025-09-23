@@ -212,6 +212,23 @@ export function wireUp(){
   document.getElementById('year').textContent = new Date().getFullYear();
   const detectorUi = setupImageDetector();
 
+  const navToggle = document.getElementById('navToggle');
+  const siteNav = document.getElementById('siteNav');
+  if(navToggle && siteNav){
+    navToggle.addEventListener('click', ()=>{
+      const expanded = navToggle.getAttribute('aria-expanded') === 'true';
+      const next = !expanded;
+      navToggle.setAttribute('aria-expanded', String(next));
+      siteNav.classList.toggle('open', next);
+    });
+    siteNav.querySelectorAll('a').forEach(link=>{
+      link.addEventListener('click', ()=>{
+        siteNav.classList.remove('open');
+        navToggle.setAttribute('aria-expanded','false');
+      });
+    });
+  }
+
   document.getElementById('analyzeBtn').addEventListener('click', async ()=>{
     const v = document.getElementById('input').value.trim();
     if(!v) return document.getElementById('input').focus();
@@ -234,13 +251,22 @@ export function wireUp(){
   // API toggle
   const apiUrl = document.getElementById('apiUrl');
   const apiStatus = document.getElementById('apiStatus');
+  const apiStatusDetail = document.getElementById('apiStatusDetail');
   const saveApi = document.getElementById('saveApi');
   const storedApi = localStorage.getItem('isshereal:api') || '';
   apiUrl.value = storedApi;
 
   const applyApi = (url)=>{
     CONFIG.API_BASE = url;
-    apiStatus.textContent = url ? 'API: on' : 'API: off';
+    const statusText = url ? 'API online' : 'API offline';
+    if(apiStatus){
+      apiStatus.textContent = statusText;
+      apiStatus.classList.toggle('online', Boolean(url));
+      apiStatus.classList.toggle('offline', !url);
+    }
+    if(apiStatusDetail){
+      apiStatusDetail.textContent = statusText;
+    }
     detectorUi.setEnabled(Boolean(url), url);
   };
   applyApi(storedApi);
@@ -282,4 +308,21 @@ export function wireUp(){
 
   ensureGeoShim();
   getViewerContext();
+
+  const revealEls = document.querySelectorAll('.reveal');
+  if(revealEls.length){
+    if('IntersectionObserver' in window){
+      const observer = new IntersectionObserver((entries)=>{
+        entries.forEach(entry=>{
+          if(entry.isIntersecting){
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.2 });
+      revealEls.forEach(el=>observer.observe(el));
+    } else {
+      revealEls.forEach(el=>el.classList.add('visible'));
+    }
+  }
 }
