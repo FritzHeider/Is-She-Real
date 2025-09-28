@@ -14,6 +14,19 @@ cp .env.example .env   # fill tokens (and API_KEY if you want to protect endpoin
 uvicorn app.main:app --reload --port 8080
 ```
 
+## Deploy (Vercel)
+```bash
+# Install Vercel CLI if you don't already have it
+npm install -g vercel
+
+# First deployment creates the project
+vercel --prod
+```
+
+Environment variables can be configured with `vercel env`. The API will be
+served from the default Serverless Function entrypoint configured in
+`vercel.json`.
+
 ## Deploy (Fly.io)
 ```bash
 chmod +x deploy.sh
