@@ -6,7 +6,15 @@ import httpx, socket, os
 from PIL import UnidentifiedImageError
 
 from .detector import detect_image_bytes
-from .social import fetch_instagram, fetch_facebook, fetch_tiktok, TOKENS_STATE
+from .normalize import error_json
+from .social import (
+    fetch_instagram,
+    fetch_facebook,
+    fetch_tiktok,
+    fetch_twitter,
+    fetch_youtube,
+    TOKENS_STATE,
+)
 
 APP_NAME = "isshereal-api"
 TIMEOUT_S = float(os.getenv("TIMEOUT_S", "6.0"))
@@ -16,7 +24,7 @@ def current_api_key() -> str:
 
     return os.getenv("API_KEY", "")
 
-app = FastAPI(title=APP_NAME, version="0.4.0")
+app = FastAPI(title=APP_NAME, version="0.5.0")
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.add_middleware(
     CORSMiddleware,
@@ -38,9 +46,42 @@ class EnrichIn(BaseModel):
     url: AnyHttpUrl
     timeout_ms: int = 6000
 
+
+class InstagramQuery(BaseModel):
+    user_id: str | None = None
+    username: str | None = None
+
+
+class FacebookQuery(BaseModel):
+    page_id: str | None = None
+    username: str | None = None
+
+
+class TikTokQuery(BaseModel):
+    username: str
+
+
+class TwitterQuery(BaseModel):
+    username: str | None = None
+    user_id: str | None = None
+
+
+class YouTubeQuery(BaseModel):
+    channel_id: str | None = None
+    handle: str | None = None
+    custom_url: str | None = None
+
+
+class SocialAssessIn(BaseModel):
+    instagram: InstagramQuery | None = None
+    facebook: FacebookQuery | None = None
+    tiktok: TikTokQuery | None = None
+    twitter: TwitterQuery | None = None
+    youtube: YouTubeQuery | None = None
+
 @app.get("/health")
 async def health():
-    return {"ok": True, "service": APP_NAME, "version": "0.4.0"}
+    return {"ok": True, "service": APP_NAME, "version": "0.5.0"}
 
 @app.get("/admin/health")
 async def admin_health():
@@ -150,3 +191,122 @@ async def tiktok(username: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
+
+
+@app.get("/social/twitter", dependencies=[Depends(require_api_key)])
+async def twitter(username: str | None = None, user_id: str | None = None):
+    try:
+        return await fetch_twitter(username=username, user_id=user_id, timeout=TIMEOUT_S)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@app.get("/social/youtube", dependencies=[Depends(require_api_key)])
+async def youtube(channel_id: str | None = None, handle: str | None = None, custom_url: str | None = None):
+    try:
+        return await fetch_youtube(
+            channel_id=channel_id,
+            handle=handle,
+            custom_url=custom_url,
+            timeout=TIMEOUT_S,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+async def _safe_social_call(name: str, coro):
+    try:
+        return await coro
+    except HTTPException as exc:
+        detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+        return error_json(exc.status_code, f"{name} error: {detail}")
+    except Exception as exc:
+        return error_json(502, f"{name} error: {exc}")
+
+
+@app.post("/social/assess", dependencies=[Depends(require_api_key)])
+async def social_assess(payload: SocialAssessIn):
+    results: dict[str, dict] = {}
+
+    if payload.instagram is not None:
+        results["instagram"] = await _safe_social_call(
+            "instagram",
+            fetch_instagram(
+                user_id=payload.instagram.user_id,
+                username=payload.instagram.username,
+                timeout=TIMEOUT_S,
+            ),
+        )
+
+    if payload.facebook is not None:
+        results["facebook"] = await _safe_social_call(
+            "facebook",
+            fetch_facebook(
+                page_id=payload.facebook.page_id,
+                username=payload.facebook.username,
+                timeout=TIMEOUT_S,
+            ),
+        )
+
+    if payload.tiktok is not None:
+        results["tiktok"] = await _safe_social_call(
+            "tiktok",
+            fetch_tiktok(
+                username=payload.tiktok.username,
+                timeout=TIMEOUT_S,
+            ),
+        )
+
+    if payload.twitter is not None:
+        results["twitter"] = await _safe_social_call(
+            "twitter",
+            fetch_twitter(
+                username=payload.twitter.username,
+                user_id=payload.twitter.user_id,
+                timeout=TIMEOUT_S,
+            ),
+        )
+
+    if payload.youtube is not None:
+        results["youtube"] = await _safe_social_call(
+            "youtube",
+            fetch_youtube(
+                channel_id=payload.youtube.channel_id,
+                handle=payload.youtube.handle,
+                custom_url=payload.youtube.custom_url,
+                timeout=TIMEOUT_S,
+            ),
+        )
+
+    scores = []
+    flags: list[str] = []
+    for name, data in results.items():
+        if not isinstance(data, dict):
+            continue
+        if data.get("ok"):
+            metrics = data.get("metrics") or {}
+            score = metrics.get("score")
+            if isinstance(score, (int, float)):
+                scores.append(float(score))
+            for flag in metrics.get("flags", []):
+                flags.append(f"{name}: {flag}")
+        else:
+            detail = data.get("error") or data.get("detail") or "unknown error"
+            flags.append(f"{name}: {detail}")
+
+    average_score = round(sum(scores) / len(scores), 3) if scores else None
+
+    return {
+        "ok": True,
+        "results": results,
+        "summary": {
+            "platforms_checked": list(results.keys()),
+            "average_score": average_score,
+            "flags": flags,
+            "tokens": TOKENS_STATE(),
+        },
+    }
