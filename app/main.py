@@ -15,6 +15,7 @@ from .social import (
     fetch_youtube,
     TOKENS_STATE,
 )
+from .openai_assess import evaluate_social_handle
 
 APP_NAME = "isshereal-api"
 TIMEOUT_S = float(os.getenv("TIMEOUT_S", "6.0"))
@@ -78,6 +79,13 @@ class SocialAssessIn(BaseModel):
     tiktok: TikTokQuery | None = None
     twitter: TwitterQuery | None = None
     youtube: YouTubeQuery | None = None
+
+
+class HandleAssessIn(BaseModel):
+    handle: str
+    platform: str | None = None
+    context: str | None = None
+    model: str | None = None
 
 @app.get("/health")
 async def health():
@@ -216,6 +224,21 @@ async def youtube(channel_id: str | None = None, handle: str | None = None, cust
         raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
+
+
+@app.post("/social/verify", dependencies=[Depends(require_api_key)])
+async def social_verify(payload: HandleAssessIn):
+    try:
+        return await evaluate_social_handle(
+            handle=payload.handle,
+            platform=payload.platform,
+            context=payload.context,
+            model=payload.model,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
 
 
 async def _safe_social_call(name: str, coro):
