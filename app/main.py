@@ -1,3 +1,5 @@
+# api/index.py
+from app.main import app  # <- FastAPI instance
 from fastapi import FastAPI, HTTPException, Query, Header, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
