@@ -88,6 +88,10 @@ class HandleAssessIn(BaseModel):
     platform: str | None = None
     context: str | None = None
     model: str | None = None
+# app/main.py
+@app.get("/")
+def index():
+    return {"ok": True, "service": "isshereal-api", "version": "0.5.0"}
 
 @app.get("/health")
 async def health():
