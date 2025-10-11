@@ -1,7 +1,4 @@
 {
-  "version": 2,
-  "functions": { "api/index.py": { "runtime": "python3.11" } },
-  "routes": [
-    { "src": "/(docs|openapi.json|health|admin/health|dns|fetch|social/.*|detect/.*|enrich)$", "dest": "/api/index.py" }
-  ]
+  "functions": { "api/**/*.py": { "runtime": "python3.12" } },
+  "installCommand": "python -m pip install -r requirements.txt"
 }
