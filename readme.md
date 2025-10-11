@@ -8,10 +8,7 @@
 
 ## Local
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # fill tokens (and API_KEY if you want to protect endpoints)
-uvicorn app.main:app --reload --port 8080
+a
 ```
 
 ## Deploy (Vercel)

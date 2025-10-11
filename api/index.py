@@ -1,2 +1,6 @@
-# api/index.py
-from app.main import app  # FastAPI() defined in app/main.py
+from fastapi import FastAPI
+app = FastAPI()
+
+@app.get("/health")
+def health():
+    return {"ok": True}
