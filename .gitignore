@@ -4,11 +4,20 @@ Thumbs.db
 *.swp
 *.swo
 
-# Build outputs
-node_modules/
-dist/
-build/
+# Python virtual environments
 .venv/
+.env
+.env.*
+
+# Python artifacts
 __pycache__/
-*.pyc
-.vercel
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Build outputs
+build/
+dist/
+
+# Misc
+.vscode/
