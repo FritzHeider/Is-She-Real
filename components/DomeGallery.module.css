@@ -1,0 +1,255 @@
+.sphereRoot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  --radius: 420px;
+  --viewer-pad: 48px;
+  --circ: calc(var(--radius) * 3.14);
+  --rot-y: calc((360deg / var(--segments-x)) / 2);
+  --rot-x: calc((360deg / var(--segments-y)) / 2);
+  --item-width: calc(var(--circ) / var(--segments-x));
+  --item-height: calc(var(--circ) / var(--segments-y));
+  --overlay-blur-color: rgba(3, 0, 20, 0.9);
+  --image-filter: saturate(1.05);
+  --tile-radius: clamp(12px, 2vw, 20px);
+  --enlarge-radius: clamp(24px, 5vw, 40px);
+}
+
+.sphereRoot * {
+  box-sizing: border-box;
+}
+
+.sphere,
+.item,
+.itemImage {
+  transform-style: preserve-3d;
+}
+
+.main {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  background: transparent;
+}
+
+.stage {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  perspective: calc(var(--radius) * 2);
+  perspective-origin: 50% 50%;
+  contain: layout paint size;
+}
+
+.sphere {
+  transform: translateZ(calc(var(--radius) * -1));
+  will-change: transform;
+}
+
+.overlay,
+.overlayBlur {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.overlay {
+  background-image: radial-gradient(rgba(235, 235, 235, 0) 65%, var(--overlay-blur-color) 100%);
+}
+
+.overlayBlur {
+  -webkit-mask-image: radial-gradient(rgba(235, 235, 235, 0) 70%, var(--overlay-blur-color) 90%);
+  mask-image: radial-gradient(rgba(235, 235, 235, 0) 70%, var(--overlay-blur-color) 90%);
+  backdrop-filter: blur(3px);
+}
+
+.item {
+  width: calc(var(--item-width) * var(--item-size-x));
+  height: calc(var(--item-height) * var(--item-size-y));
+  position: absolute;
+  top: -999px;
+  bottom: -999px;
+  left: -999px;
+  right: -999px;
+  margin: auto;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  transition: transform 300ms ease;
+  transform: rotateY(calc(var(--rot-y) * (var(--offset-x) + ((var(--item-size-x) - 1) / 2)) + var(--rot-y-delta, 0deg)))
+    rotateX(calc(var(--rot-x) * (var(--offset-y) - ((var(--item-size-y) - 1) / 2)) + var(--rot-x-delta, 0deg)))
+    translateZ(var(--radius));
+}
+
+.itemImage {
+  position: absolute;
+  inset: clamp(6px, 1.4vw, 14px);
+  border-radius: var(--tile-radius);
+  background: rgba(8, 11, 24, 0.6);
+  overflow: hidden;
+  backface-visibility: hidden;
+  transition: transform 300ms ease, box-shadow 300ms ease;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  box-shadow: 0 10px 25px rgba(2, 6, 23, 0.45);
+}
+
+.itemImage:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.45);
+}
+
+.itemImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  backface-visibility: hidden;
+  filter: var(--image-filter);
+}
+
+.tileImage {
+  object-fit: cover;
+}
+
+.viewer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--viewer-pad);
+}
+
+.viewerActive {
+  pointer-events: auto;
+}
+
+.frame {
+  height: 100%;
+  width: min(68vw, 520px);
+  aspect-ratio: 1;
+  border-radius: var(--enlarge-radius);
+  display: flex;
+  position: relative;
+}
+
+.closeButton {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 40;
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: rgba(12, 16, 35, 0.85);
+  color: rgba(226, 232, 255, 0.85);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 200ms ease, transform 200ms ease;
+}
+
+.closeButton:focus-visible,
+.closeButton:hover {
+  background: rgba(168, 85, 247, 0.35);
+  transform: translateY(-1px);
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid rgba(168, 85, 247, 0.55);
+  outline-offset: 2px;
+}
+
+@media (max-aspect-ratio: 1/1) {
+  .frame {
+    height: auto;
+    width: 100%;
+  }
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(2, 6, 23, 0.65);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 500ms ease;
+  backdrop-filter: blur(3px);
+}
+
+.enlargingTrue .scrim {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.enlarge {
+  position: absolute;
+  z-index: 30;
+  border-radius: var(--enlarge-radius);
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  transition: transform 500ms ease, opacity 500ms ease;
+  transform-origin: top left;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.55);
+}
+
+.enlarge img,
+.enlarge .tileImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: var(--image-filter);
+}
+
+.edgeFade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 120px;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(4, 0, 16, 0.8));
+}
+
+.edgeFadeTop {
+  top: 0;
+  transform: rotate(180deg);
+}
+
+.edgeFadeBottom {
+  bottom: 0;
+}
+
+@media (max-width: 1024px) {
+  .sphereRoot {
+    --radius: 340px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sphereRoot {
+    --radius: 280px;
+    --viewer-pad: 32px;
+  }
+}
+
+@media (max-width: 520px) {
+  .sphereRoot {
+    --radius: 220px;
+    --viewer-pad: 20px;
+  }
+}

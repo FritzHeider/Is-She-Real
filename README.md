@@ -43,6 +43,19 @@ python -m is_she_real.cli \
 
 The command prints a JSON report containing the credibility score, raw LLM response, and extracted warnings.
 
+## Web Experience
+
+The repository now ships with a Vercel-ready Next.js dashboard that visualizes evaluation results alongside an immersive dome
+gallery sourced from social content. To explore the interface locally:
+
+```bash
+npm install
+npm run dev
+```
+
+Then open `http://localhost:3000` to rotate through authenticity evidence, review scoring rationales, and switch between sample
+accounts.
+
 ## Project Layout
 
 ```
