@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from is_she_real.config import get_settings
 from is_she_real.models import AccountEvidence, EvaluationRequest, EvaluationResult, LLMJudgement
 
 from main import app, get_evaluator
@@ -49,3 +50,19 @@ def test_evaluate_endpoint_uses_evaluator(monkeypatch) -> None:
     assert response.json()["judgement"]["score"] == fake_result.judgement.score
     assert response.json()["prompt"] == fake_result.prompt
     app.dependency_overrides.clear()
+
+
+def test_evaluate_endpoint_missing_openai_key(monkeypatch) -> None:
+    """A missing OpenAI key should return a descriptive server error."""
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    get_settings.cache_clear()
+
+    client = TestClient(app)
+    response = client.post(
+        "/evaluate",
+        json={"account": {"platform": "instagram"}, "requested_checks": []},
+    )
+
+    assert response.status_code == 500
+    assert "OPENAI_API_KEY" in response.json()["detail"]
