@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import Depends, FastAPI, HTTPException
+from pydantic import ValidationError
 
 from is_she_real.evaluator import AccountEvaluator
 from is_she_real.models import EvaluationRequest, EvaluationResult
@@ -17,7 +18,26 @@ app = FastAPI(
 def get_evaluator() -> AccountEvaluator:
     """Provide an evaluator instance for request handling."""
 
-    return AccountEvaluator()
+    try:
+        return AccountEvaluator()
+    except ValidationError as exc:
+        missing_env = sorted(
+            {
+                str(item)
+                for error in exc.errors()
+                if error.get("type") == "missing"
+                for item in error.get("loc", ())
+            }
+        )
+        if missing_env:
+            detail = (
+                "Server configuration error: missing required environment variables "
+                + ", ".join(missing_env)
+                + "."
+            )
+        else:  # pragma: no cover - defensive path
+            detail = "Server configuration error: invalid environment configuration."
+        raise HTTPException(status_code=500, detail=detail) from exc
 
 
 @app.get("/health", summary="Service health check")
