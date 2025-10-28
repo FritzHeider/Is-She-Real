@@ -43,6 +43,31 @@ python -m is_she_real.cli \
 
 The command prints a JSON report containing the credibility score, raw LLM response, and extracted warnings.
 
+ ## REST API
+
+For integrations that prefer HTTP, the project now exposes a small FastAPI service. Launch it locally with Uvicorn:
+
+```bash
+uvicorn main:app --reload
+```
+
+Then send a request to `POST /evaluate` with the same payload accepted by the CLI:
+
+```bash
+curl -X POST http://localhost:8000/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account": {
+      "platform": "instagram",
+      "handle": "@candidsunsets",
+      "bio": "Travel photographer sharing authentic stories"
+    }
+  }'
+```
+
+The response mirrors the evaluator's JSON schema, and `GET /health` returns a simple status payload.
+
+ 
 ## Web Experience
 
 The repository now ships with a Vercel-ready Next.js dashboard that visualizes evaluation results alongside an immersive dome
