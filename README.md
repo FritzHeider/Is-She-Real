@@ -43,7 +43,7 @@ python -m is_she_real.cli \
 
 The command prints a JSON report containing the credibility score, raw LLM response, and extracted warnings.
 
-## REST API
+ ## REST API
 
 For integrations that prefer HTTP, the project now exposes a small FastAPI service. Launch it locally with Uvicorn:
 
@@ -67,6 +67,7 @@ curl -X POST http://localhost:8000/evaluate \
 
 The response mirrors the evaluator's JSON schema, and `GET /health` returns a simple status payload.
 
+ 
 ## Web Experience
 
 The repository now ships with a Vercel-ready Next.js dashboard that visualizes evaluation results alongside an immersive dome
