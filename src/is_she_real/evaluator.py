@@ -64,7 +64,10 @@ class AccountEvaluator:
             external_links=external_links or [],
             signals=signals or [],
         )
-        request = EvaluationRequest(account=evidence, requested_checks=requested_checks or [])
+        request_data: Dict[str, Any] = {"account": evidence}
+        if requested_checks is not None:
+            request_data["requested_checks"] = requested_checks
+        request = EvaluationRequest(**request_data)
         return self.evaluate(request)
 
 
