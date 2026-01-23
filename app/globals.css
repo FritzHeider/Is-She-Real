@@ -259,6 +259,17 @@ main {
   color: var(--text-muted);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 .evaluation-list {
   list-style: none;
   display: grid;
@@ -321,6 +332,170 @@ main {
   gap: 1.5rem;
 }
 
+.chat-panel {
+  grid-column: span 7;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.chat-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 20px;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.chat-summary__label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.chat-summary strong {
+  font-size: 1.2rem;
+}
+
+.chat-messages {
+  display: grid;
+  gap: 1rem;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.chat-message {
+  border-radius: 18px;
+  padding: 0.85rem 1rem;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  display: grid;
+  gap: 0.4rem;
+}
+
+.chat-message--assistant {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(96, 165, 250, 0.35);
+}
+
+.chat-message--user {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.45);
+  margin-left: 1.5rem;
+}
+
+.chat-message__role {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(226, 232, 255, 0.6);
+}
+
+.chat-message p {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.chat-suggestions button {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.5);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  transition: border-color 200ms ease, color 200ms ease;
+}
+
+.chat-suggestions button:hover,
+.chat-suggestions button:focus-visible {
+  border-color: rgba(168, 85, 247, 0.6);
+  color: var(--text-primary);
+}
+
+.chat-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+}
+
+.chat-input input {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+}
+
+.chat-input input:focus-visible {
+  outline: 2px solid rgba(168, 85, 247, 0.5);
+  outline-offset: 2px;
+}
+
+.chat-input button {
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(120deg, var(--accent) 0%, var(--accent-strong) 100%);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rubric-panel {
+  grid-column: span 5;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.rubric-list {
+  list-style: none;
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+}
+
+.rubric-list li {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.rubric-list strong {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(226, 232, 255, 0.8);
+}
+
+.rubric-list span {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.rubric-footnote {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
 .metrics-row {
   display: grid;
   gap: 0.75rem;
@@ -347,7 +522,9 @@ main {
   }
 
   .dome-panel,
-  .details-panel {
+  .details-panel,
+  .chat-panel,
+  .rubric-panel {
     grid-column: span 1;
   }
 

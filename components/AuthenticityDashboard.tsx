@@ -2,7 +2,7 @@
 
 import clsx from 'clsx';
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DomeGallery from './DomeGallery';
 import type { AccountProfile } from './lib/accounts';
 
@@ -34,6 +34,7 @@ function getPlatformLabel(platform: AccountProfile['platform']) {
 
 export default function AuthenticityDashboard({ accounts }: AuthenticityDashboardProps) {
   const [selectedId, setSelectedId] = useState(accounts[0]?.id ?? '');
+  const [chatInput, setChatInput] = useState('');
 
   const selected = useMemo(
     () => accounts.find((account) => account.id === selectedId) ?? accounts[0],
@@ -45,6 +46,82 @@ export default function AuthenticityDashboard({ accounts }: AuthenticityDashboar
   }
 
   const credibilityPercent = Math.round(selected.credibilityScore * 100);
+  const credibilityGrade = credibilityPercent >= 90 ? 'A' : credibilityPercent >= 80 ? 'B' : credibilityPercent >= 70 ? 'C' : credibilityPercent >= 60 ? 'D' : 'F';
+
+  const suggestionPrompts = [
+    `Summarize why ${selected.displayName} received a ${credibilityPercent}% score.`,
+    'List the top two risks and how to verify them.',
+    'What would improve the grade in the next review cycle?',
+    'Give a one-line verdict I can paste into a report.'
+  ];
+
+  const initialMessages = useMemo(
+    () => [
+      {
+        id: `${selected.id}-intro`,
+        role: 'assistant' as const,
+        content: `I am the Judge Agent. I can explain the score, highlight risks, and suggest verification steps for ${selected.displayName}. Ask me anything about this dossier.`
+      },
+      {
+        id: `${selected.id}-summary`,
+        role: 'assistant' as const,
+        content: `Current grade: ${credibilityGrade} (${credibilityPercent}%). Verdict: ${selected.verdict}`
+      }
+    ],
+    [credibilityGrade, credibilityPercent, selected.displayName, selected.id, selected.verdict]
+  );
+
+  const [messages, setMessages] = useState(initialMessages);
+
+  useEffect(() => {
+    setMessages(initialMessages);
+    setChatInput('');
+  }, [initialMessages]);
+
+  const generateAssistantReply = (prompt: string) => {
+    const normalized = prompt.toLowerCase();
+    if (normalized.includes('score') || normalized.includes('grade')) {
+      return `The score lands at ${credibilityPercent}% (${credibilityGrade}) because the account shows ${selected.signals
+        .slice(0, 2)
+        .map((signal) => signal.label.toLowerCase())
+        .join(' and ')} signals, while we still need to validate ${selected.signals.at(-1)?.label.toLowerCase() ?? 'content provenance'}.`;
+    }
+
+    if (normalized.includes('risk') || normalized.includes('verify')) {
+      return `Primary risks: ${selected.signals
+        .slice(0, 2)
+        .map((signal) => signal.description)
+        .join(' ')} Next, request platform verification logs and cross-check recent posts against external sources.`;
+    }
+
+    if (normalized.includes('improve') || normalized.includes('next')) {
+      return `To improve the grade, capture a longer post history, confirm follower authenticity via a third-party audit, and verify that engagement patterns align with ${selected.displayName}'s stated niche.`;
+    }
+
+    return `Verdict: ${selected.verdict} The evidence set supports a ${credibilityPercent}% confidence score. I can break down the signals or outline follow-up checks if needed.`;
+  };
+
+  const handleSendMessage = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!chatInput.trim()) {
+      return;
+    }
+
+    const userMessage = {
+      id: `${selected.id}-user-${Date.now()}`,
+      role: 'user' as const,
+      content: chatInput.trim()
+    };
+
+    const assistantMessage = {
+      id: `${selected.id}-assistant-${Date.now()}`,
+      role: 'assistant' as const,
+      content: generateAssistantReply(chatInput.trim())
+    };
+
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    setChatInput('');
+  };
 
   return (
     <main className="app-shell">
@@ -138,6 +215,91 @@ export default function AuthenticityDashboard({ accounts }: AuthenticityDashboar
           </div>
           <div style={{ flex: 1, position: 'relative' }}>
             <DomeGallery key={selected.id} items={selected.gallery} segmentsX={18} segmentsY={12} />
+          </div>
+        </article>
+      </section>
+
+      <section className="shell-grid">
+        <article className={clsx('shell-grid__panel', 'chat-panel')}>
+          <div className="panel-heading">
+            <h2>Judge Agent chat</h2>
+            <p>Talk to the interactive AI agent to grade, justify, and refine the verdict in real time.</p>
+          </div>
+
+          <div className="chat-summary">
+            <div>
+              <span className="chat-summary__label">Agent grade</span>
+              <strong>{credibilityGrade}</strong>
+            </div>
+            <div>
+              <span className="chat-summary__label">Confidence</span>
+              <strong>{credibilityPercent}%</strong>
+            </div>
+            <div>
+              <span className="chat-summary__label">Status</span>
+              <strong>{selected.verdict}</strong>
+            </div>
+          </div>
+
+          <div className="chat-messages" role="log" aria-live="polite">
+            {messages.map((message) => (
+              <div key={message.id} className={clsx('chat-message', `chat-message--${message.role}`)}>
+                <span className="chat-message__role">{message.role === 'assistant' ? 'Judge Agent' : 'Analyst'}</span>
+                <p>{message.content}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="chat-suggestions">
+            {suggestionPrompts.map((prompt) => (
+              <button key={prompt} type="button" onClick={() => setChatInput(prompt)}>
+                {prompt}
+              </button>
+            ))}
+          </div>
+
+          <form className="chat-input" onSubmit={handleSendMessage}>
+            <label htmlFor="judge-chat-input" className="sr-only">
+              Ask the judge agent
+            </label>
+            <input
+              id="judge-chat-input"
+              type="text"
+              placeholder="Ask the judge agent to explain or re-grade..."
+              value={chatInput}
+              onChange={(event) => setChatInput(event.target.value)}
+            />
+            <button type="submit">Send</button>
+          </form>
+        </article>
+
+        <article className={clsx('shell-grid__panel', 'rubric-panel')}>
+          <div className="panel-heading">
+            <h2>Grading rubric</h2>
+            <p>Keep the agent aligned with your trust &amp; safety policy thresholds.</p>
+          </div>
+
+          <ul className="rubric-list">
+            <li>
+              <strong>Identity signals</strong>
+              <span>Validate bios, cross-platform handles, and creator verification history.</span>
+            </li>
+            <li>
+              <strong>Audience integrity</strong>
+              <span>Review follower authenticity, engagement consistency, and sudden spikes.</span>
+            </li>
+            <li>
+              <strong>Content provenance</strong>
+              <span>Sample recent posts to confirm original media and metadata lineage.</span>
+            </li>
+            <li>
+              <strong>Behavior anomalies</strong>
+              <span>Flag outliers in posting cadence, sponsored content frequency, or geo mismatches.</span>
+            </li>
+          </ul>
+
+          <div className="rubric-footnote">
+            The Judge Agent blends rubric checks with the LLM rationale to recommend a grade and next-step validation tasks.
           </div>
         </article>
       </section>
