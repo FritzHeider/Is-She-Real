@@ -54,7 +54,7 @@ def evaluate(
         posts=posts,
         external_links=links,
         signals=signal or [],
-        requested_checks=check or [],
+        requested_checks=check,
     )
     typer.echo(json.dumps(result.model_dump(mode="json"), indent=2))
 
